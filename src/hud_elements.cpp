@@ -1127,7 +1127,6 @@ void HudElements::exec_name(){
         ImGui::PopFont();
     }
 }
-}
 
 void HudElements::sort_elements(const std::pair<std::string, std::string>& option){
     const auto& param = option.first;
