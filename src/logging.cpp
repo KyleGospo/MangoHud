@@ -44,6 +44,7 @@ static void upload_file(std::string logFile){
 
   command += " | grep Location | cut -c11-";
   std::string url = exec(command);
+  std::cout << "upload url: " << url;
   exec("xdg-open " + url);
 }
 
@@ -54,6 +55,7 @@ static void upload_files(const std::vector<std::string>& logFiles){
 
   command += " | grep Location | cut -c11-";
   std::string url = exec(command);
+  std::cout << "upload url: " << url;
   exec("xdg-open " + url);
 }
 
