@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 r"""
     Script to plot all the MangoHud benchmarks contained in a given folder.
