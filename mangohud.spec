@@ -20,6 +20,7 @@ Source2:        https://wrapdb.mesonbuild.com/v1/projects/imgui/%{imgui_ver}/%{i
 BuildRequires:  appstream
 BuildRequires:  gcc
 BuildRequires:  gcc-c++
+BuildRequires:  libstdc++-static
 BuildRequires:  git-core
 BuildRequires:  glslang-devel
 BuildRequires:  libappstream-glib
