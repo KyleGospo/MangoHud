@@ -698,7 +698,6 @@ static void set_param_defaults(struct overlay_params *params){
    params->table_columns = 3;
    params->text_outline_color = 0x000000;
    params->text_outline_thickness = 1.5;
-   current_preset = -1;
 }
 
 void
@@ -754,10 +753,12 @@ parse_overlay_config(struct overlay_params *params,
       // Get config options
       parseConfigFile(*params);
 
-      if (!use_existing_preset && params->options.find("preset") != params->options.end()) {
-        auto presets = parse_preset(params->options.find("preset")->second.c_str());
-        if (!presets.empty())
-          params->preset = presets;
+      if (!use_existing_preset) {
+         if (params->options.find("preset") != params->options.end()) {
+            auto presets = parse_preset(params->options.find("preset")->second.c_str());
+            if (!presets.empty())
+               params->preset = presets;
+         }
         current_preset = params->preset[0];
       }
 
@@ -993,10 +994,6 @@ void add_to_options(struct overlay_params *params, std::string option, std::stri
 }
 
 void presets(int preset, struct overlay_params *params) {
-   printf("preset: %i\n", preset);
-   if (preset == -1)
-      return;
-
    if (parse_preset_config(preset, params))
       return;
 
