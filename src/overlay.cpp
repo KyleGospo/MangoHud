@@ -158,6 +158,8 @@ void update_hw_info(const struct overlay_params& params, uint32_t vendorID)
    currentLogData.gpu_power = gpu_info.powerUsage;
 #ifdef __linux__
    currentLogData.ram_used = memused;
+   currentLogData.swap_used = swapused;
+   currentLogData.process_rss = proc_mem.resident / float((2 << 29)); // GiB, consistent w/ other mem stats
 #endif
 
    currentLogData.cpu_load = cpuStats.GetCPUDataTotal().percent;
