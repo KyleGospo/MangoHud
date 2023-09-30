@@ -241,9 +241,13 @@ void update_hud_info_with_frametime(struct swapchain_stats& sw_stats, const stru
    if (sw_stats.last_present_time) {
         sw_stats.frames_stats[f_idx].stats[OVERLAY_PLOTS_frame_timing] =
             frametime_ns;
-      frametime_data[f_idx] = frametime_ms;
+      frametime_data.push_back(frametime_ms);
+      frametime_data.erase(frametime_data.begin());
    }
-
+#ifdef __linux__
+   if (throttling)
+      throttling->update();
+#endif
    frametime = frametime_ms;
    fps = double(1000 / frametime_ms);
 
@@ -582,9 +586,9 @@ static void render_benchmark(swapchain_stats& data, const struct overlay_params&
    ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0, 0.0, 0.0, alpha / params.background_alpha));
    ImGui::Dummy(ImVec2(0.0f, 8.0f));
    if (params.enabled[OVERLAY_PARAM_ENABLED_histogram])
-      ImGui::PlotHistogram("", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvailWidth(), 50));
+      ImGui::PlotHistogram("", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvail().x, 50));
    else
-      ImGui::PlotLines("", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvailWidth(), 50));
+      ImGui::PlotLines("", benchmark.fps_data.data(), benchmark.fps_data.size(), 0, "", 0.0f, max + 10, ImVec2(ImGui::GetContentRegionAvail().x, 50));
    ImGui::PopStyleColor(2);
    ImGui::End();
 }
@@ -669,12 +673,10 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
       if (ImGui::BeginTable("hud", params.table_columns, table_flags )) {
          HUDElements.place = 0;
          for (auto& func : HUDElements.ordered_functions){
-            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(-3,-3));
             if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func.first != HudElements::_exec)
                ImGui::TableNextRow();
             func.first();
             HUDElements.place += 1;
-            ImGui::PopStyleVar();
             if(!HUDElements.ordered_functions.empty() && params.enabled[OVERLAY_PARAM_ENABLED_horizontal] && func != HUDElements.ordered_functions.back())
                horizontal_separator(params);
          }
@@ -683,7 +685,7 @@ void render_imgui(swapchain_stats& data, struct overlay_params& params, ImVec2& 
             if (HUDElements.table_columns_count > 0 && HUDElements.table_columns_count < 65 )
                params.table_columns = HUDElements.table_columns_count;
             if(!params.enabled[OVERLAY_PARAM_ENABLED_horizontal_stretch]) {
-               float content_width = ImGui::GetContentRegionAvailWidth() - (params.table_columns * 64);
+               float content_width = ImGui::GetContentRegionAvail().x - (params.table_columns * 64);
                window_size = ImVec2(content_width, params.height);
             }
          }
@@ -869,6 +871,7 @@ void init_gpu_stats(uint32_t& vendorID, uint32_t reported_deviceID, overlay_para
          if (amdgpu_verify_metrics(gpu_metrics_path)) {
             gpu_metrics_exists = true;
             metrics_path = gpu_metrics_path;
+            throttling = std::make_unique<Throttling>();
             SPDLOG_DEBUG("Using gpu_metrics of {}", gpu_metrics_path);
          }
 

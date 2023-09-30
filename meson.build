@@ -195,8 +195,8 @@ imgui_options = [
   'sdl2=disabled',
   'osx=disabled',
   'win=disabled',
-  'marmalade=disabled',
   'allegro5=disabled',
+  'webgpu=disabled'
 ]
 
 sizeof_ptr = cc.sizeof('void*')
@@ -215,6 +215,18 @@ endif
 
 dearimgui_sp = subproject('imgui', default_options: imgui_options)
 dearimgui_dep = dearimgui_sp.get_variable('imgui_dep')
+
+if is_unixy
+implot_sp = subproject('implot')
+implot_dep = implot_sp.get_variable('implot_dep')
+implot_lib = static_library(
+  'implot_static',
+  objects: implot_sp.get_variable('implot_lib').extract_all_objects()
+)
+else
+implot_dep = null_dep
+implot_lib = static_library('nulllib', [])
+endif
 
 spdlog_dep = cpp.find_library('spdlog', required: get_option('use_system_spdlog'))
 if not spdlog_dep.found()
@@ -241,6 +253,7 @@ endif
 
 if get_option('mangoapp') or get_option('mangoapp_layer')
   glfw3_dep = dependency('glfw3')
+  glew_dep = dependency('glew')
 endif
 
 json_dep = dependency('nlohmann_json')
