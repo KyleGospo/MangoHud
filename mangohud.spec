@@ -6,6 +6,9 @@
 # Tests requires bundled stuff. Disable for now.
 %bcond_with tests
 
+# Disable unpackaged files check for 32-bit builds shipping with conflicting files
+%define _unpackaged_files_terminate_build 0
+
 Name:           mangohud
 Version:        100.bazzite.{{{ git_dir_version }}}
 Release:        1%{?dist}
@@ -106,18 +109,18 @@ mv imgui-%{imgui_ver} subprojects/
 %files
 %license LICENSE
 %doc README.md
+%if %{__isa_bits} == 64
 %{_bindir}/%{name}*
 %{_bindir}/mangoapp
 %{_bindir}/mangoplot
 %{_datadir}/icons/hicolor/scalable/*/*.svg
-%{_datadir}/vulkan/implicit_layer.d/*Mango*.json
 %{_docdir}/%{name}/%{appname}.conf.example
-%{_libdir}/%{name}/
 %{_mandir}/man1/%{name}.1*
 %{_mandir}/man1/mangoapp.1*
 %{_metainfodir}/*.metainfo.xml
+%endif
+%{_datadir}/vulkan/implicit_layer.d/*Mango*.json
 %{_libdir}/%{name}/libMangoApp.so
-
 
 %changelog
 {{{ git_dir_changelog }}}
