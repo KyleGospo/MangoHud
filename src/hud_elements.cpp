@@ -3,6 +3,7 @@
 #include <functional>
 #include <sstream>
 #include <cmath>
+#include <map>
 #include "overlay.h"
 #include "overlay_params.h"
 #include "hud_elements.h"
@@ -885,7 +886,7 @@ void HudElements::custom_text_center(){
         ImguiNextColumnFirstItem();
         ImGui::PushFont(HUDElements.sw_stats->font1);
 
-        const std::string& value = HUDElements.ordered_functions[HUDElements.place].second;
+        const std::string& value = HUDElements.ordered_functions[HUDElements.place].value;
 
         center_text(value);
         HUDElements.TextColored(HUDElements.colors.text, "%s", value.c_str());
@@ -900,7 +901,7 @@ void HudElements::custom_text(){
     ImGui::PushFont(HUDElements.sw_stats->font1);
     const char* value;
     if (size_t(HUDElements.place) < HUDElements.ordered_functions.size())
-        value = HUDElements.ordered_functions[HUDElements.place].second.c_str();
+        value = HUDElements.ordered_functions[HUDElements.place].value.c_str();
     else {
         ImGui::PopFont();
         return;
@@ -1233,7 +1234,7 @@ void HudElements::duration(){
 void HudElements::graphs(){
     ImguiNextColumnFirstItem();
     ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-    const std::string& value = HUDElements.ordered_functions[HUDElements.place].second;
+    const std::string& value = HUDElements.ordered_functions[HUDElements.place].value;
     assert(kMaxGraphEntries >= graph_data.size());
     std::vector<float> arr(kMaxGraphEntries - graph_data.size());
 
@@ -1357,64 +1358,83 @@ void HudElements::exec_name(){
     }
 }
 
-void HudElements::sort_elements(const std::pair<std::string, std::string>& option){
+void HudElements::sort_elements(const std::pair<std::string, std::string>& option) {
     const auto& param = option.first;
     const auto& value = option.second;
 
-    // Use this to always add to front of vector
-    //ordered_functions.insert(ordered_functions.begin(),std::make_pair(param,value));
+    // ordered_functions.push_back({func name, "name", value});
+    const std::map<std::string, Function> display_params = {
+        {"version", {version}},
+        {"time", {time}},
+        {"gpu_stats", {gpu_stats}},
+        {"cpu_stats", {cpu_stats}},
+        {"core_load", {core_load}},
+        {"io_read", {io_stats}},
+        {"io_write", {io_stats}},
+        {"arch", {arch}},
+        {"wine", {wine}},
+        {"procmem", {procmem}},
+        {"gamemode", {gamemode}},
+        {"vkbasalt", {vkbasalt}},
+        {"engine_version", {engine_version}},
+        {"vulkan_driver", {vulkan_driver}},
+        {"resolution", {resolution}},
+        {"show_fps_limit", {show_fps_limit}},
+        {"vram", {vram}},
+        {"ram", {ram}},
+        {"fps", {fps}},
+        {"gpu_name", {gpu_name}},
+        {"frame_timing", {frame_timing}},
+        {"media_player", {media_player}},
+        {"custom_text", {custom_text}},
+        {"custom_text_center", {custom_text_center}},
+        {"exec", {_exec}},
+        {"battery", {battery}},
+        {"fps_only", {fps_only}},
+        {"fsr", {gamescope_fsr}},
+        {"debug", {gamescope_frame_timing}},
+        {"device_battery", {device_battery}},
+        {"frame_count", {frame_count}},
+        {"fan", {fan}},
+        {"throttling_status", {throttling_status}},
+        {"exec_name", {exec_name}},
+        {"duration", {duration}},
+        {"graphs", {graphs}}
+    };
 
-    if (param == "version")         { ordered_functions.push_back({version, value});                }
-    if (param == "time")            { ordered_functions.push_back({time, value});                   }
-    if (param == "gpu_stats")       { ordered_functions.push_back({gpu_stats, value});              }
-    if (param == "cpu_stats")       { ordered_functions.push_back({cpu_stats, value});              }
-    if (param == "core_load")       { ordered_functions.push_back({core_load, value});              }
-    if (param == "io_read" || param == "io_write") {
-        // Don't add twice
-        if (std::find_if(ordered_functions.begin(), ordered_functions.end(), [](const auto& a) -> bool { return a.first == io_stats; }) != ordered_functions.end())
-            return;
-        ordered_functions.push_back({io_stats, value});
-    }
-    if (param == "arch")            { ordered_functions.push_back({arch, value});                   }
-    if (param == "wine")            { ordered_functions.push_back({wine, value});                   }
-    if (param == "procmem")         { ordered_functions.push_back({procmem, value});                }
-    if (param == "gamemode")        { ordered_functions.push_back({gamemode, value});               }
-    if (param == "vkbasalt")        { ordered_functions.push_back({vkbasalt, value});               }
-    if (param == "engine_version")  { ordered_functions.push_back({engine_version, value});         }
-    if (param == "vulkan_driver")   { ordered_functions.push_back({vulkan_driver, value});          }
-    if (param == "resolution")      { ordered_functions.push_back({resolution, value});             }
-    if (param == "show_fps_limit")  { ordered_functions.push_back({show_fps_limit, value});         }
-    if (param == "vram")            { ordered_functions.push_back({vram, value});                   }
-    if (param == "ram")             { ordered_functions.push_back({ram, value});                    }
-    if (param == "fps")             { ordered_functions.push_back({fps, value});                    }
-    if (param == "gpu_name")        { ordered_functions.push_back({gpu_name, value});               }
-    if (param == "frame_timing")    { ordered_functions.push_back({frame_timing, value});           }
-    if (param == "media_player")    { ordered_functions.push_back({media_player, value});           }
-    if (param == "custom_text")     { ordered_functions.push_back({custom_text, value});            }
-    if (param == "custom_text_center")  { ordered_functions.push_back({custom_text_center, value}); }
-    if (param == "exec")            { ordered_functions.push_back({_exec, value});
-                                      exec_list.push_back({int(ordered_functions.size() - 1), value});       }
-    if (param == "battery")         { ordered_functions.push_back({battery, value});                }
-    if (param == "fps_only")        { ordered_functions.push_back({fps_only, value});               }
-    if (param == "fsr")             { ordered_functions.push_back({gamescope_fsr, value});          }
-    if (param == "debug")           { ordered_functions.push_back({gamescope_frame_timing, value}); }
-    if (param == "device_battery")  { ordered_functions.push_back({device_battery, value});         }
-    if (param == "frame_count")     { ordered_functions.push_back({frame_count, value});            }
-    if (param == "fan")             { ordered_functions.push_back({fan, value});                    }
-    if (param == "throttling_status")        { ordered_functions.push_back({throttling_status, value});               }
-    if (param == "exec_name")        { ordered_functions.push_back({exec_name, value});             }
-    if (param == "duration")        { ordered_functions.push_back({duration, value});               }
-    if (param == "graphs"){
-        if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs])
-            HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
-        auto values = str_tokenize(value);
-        for (auto& value : values) {
-            if (find(permitted_params.begin(), permitted_params.end(), value) != permitted_params.end())
-                ordered_functions.push_back({graphs, value});
-            else
-            {
-                spdlog::error("Unrecognized graph type: {}", value);
+    // check param against map
+    auto check_param = display_params.find(param);
+    if (check_param != display_params.end()) {
+        const Function& func = check_param->second;
+
+        if (param == "debug") {
+            ordered_functions.push_back({gamescope_frame_timing, "gamescope_frame_timing", value});
+        } else if (param == "fsr") {
+            ordered_functions.push_back({gamescope_fsr, "gamescope_fsr", value});
+        } else if (param == "io_read" || param == "io_write") {
+            // Don't add twice
+            if (std::none_of(ordered_functions.begin(), ordered_functions.end(),
+                [](const auto& a) { return a.name == "io_stats"; })) {
+                ordered_functions.push_back({io_stats, "io_stats", value});
             }
+        } else if (param == "graphs") {
+            // Handle graphs parameter
+            if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs]) {
+                HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_graphs] = true;
+            }
+
+            auto values = str_tokenize(value);
+            for (auto& val : values) {
+                if (find(permitted_params.begin(), permitted_params.end(), val) != permitted_params.end()) {
+                    ordered_functions.push_back({graphs, "graph: " + val, val});
+                } else {
+                    spdlog::error("Unrecognized graph type: {}", val);
+                }
+            }
+        } else {
+            // Use this to always add to the front of the vector
+            // ordered_functions.insert(ordered_functions.begin(), std::make_pair(param, value));
+            ordered_functions.push_back({func.run, param, value});
         }
     }
     return;
@@ -1424,65 +1444,65 @@ void HudElements::legacy_elements(){
     string value = "NULL";
     ordered_functions.clear();
     if (params->enabled[OVERLAY_PARAM_ENABLED_time])
-        ordered_functions.push_back({time,               value});
+        ordered_functions.push_back({time, "time", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_version])
-        ordered_functions.push_back({version,            value});
+        ordered_functions.push_back({version, "version", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_stats])
-        ordered_functions.push_back({gpu_stats,          value});
+        ordered_functions.push_back({gpu_stats, "gpu_stats", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_cpu_stats])
-        ordered_functions.push_back({cpu_stats,          value});
+        ordered_functions.push_back({cpu_stats, "cpu_stats", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_core_load])
-        ordered_functions.push_back({core_load,          value});
+        ordered_functions.push_back({core_load, "core_load", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_io_read] || params->enabled[OVERLAY_PARAM_ENABLED_io_write])
-        ordered_functions.push_back({io_stats,           value});
+        ordered_functions.push_back({io_stats, "io_stats", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_vram])
-        ordered_functions.push_back({vram,               value});
+        ordered_functions.push_back({vram, "vram", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
-        ordered_functions.push_back({ram,                value});
+        ordered_functions.push_back({ram, "ram", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_battery])
-        ordered_functions.push_back({battery,            value});
+        ordered_functions.push_back({battery, "battery", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fan])
-        ordered_functions.push_back({fan,                value});
+        ordered_functions.push_back({fan, "fan", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fsr])
-        ordered_functions.push_back({gamescope_fsr,      value});
+        ordered_functions.push_back({gamescope_fsr, "gamescope_fsr", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
-        ordered_functions.push_back({throttling_status,  value});
+        ordered_functions.push_back({throttling_status, "throttling_status", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps])
-        ordered_functions.push_back({fps,                value});
+        ordered_functions.push_back({fps, "fps", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps_only])
-        ordered_functions.push_back({fps_only,           value});
+        ordered_functions.push_back({fps_only, "fps_only", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_engine_version])
-        ordered_functions.push_back({engine_version,     value});
+        ordered_functions.push_back({engine_version, "engine_version", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_gpu_name])
-        ordered_functions.push_back({gpu_name,           value});
+        ordered_functions.push_back({gpu_name, "gpu_name", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_vulkan_driver])
-        ordered_functions.push_back({vulkan_driver,      value});
+        ordered_functions.push_back({vulkan_driver, "vulkan_driver", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_arch])
-        ordered_functions.push_back({arch,               value});
+        ordered_functions.push_back({arch, "arch", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_wine])
-        ordered_functions.push_back({wine,               value});
+        ordered_functions.push_back({wine, "wine", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_frame_timing])
-        ordered_functions.push_back({frame_timing,       value});
+        ordered_functions.push_back({frame_timing, "frame_timing", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_frame_count])
-        ordered_functions.push_back({frame_count,         value});
+        ordered_functions.push_back({frame_count, "frame_count", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_debug] && !params->enabled[OVERLAY_PARAM_ENABLED_horizontal])
-        ordered_functions.push_back({gamescope_frame_timing, value});
+        ordered_functions.push_back({gamescope_frame_timing, "gamescope_frame_timing", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_gamemode])
-        ordered_functions.push_back({gamemode,           value});
+        ordered_functions.push_back({gamemode, "gamemode", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_vkbasalt])
-        ordered_functions.push_back({vkbasalt,           value});
+        ordered_functions.push_back({vkbasalt, "vkbasalt", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_show_fps_limit])
-        ordered_functions.push_back({show_fps_limit,     value});
+        ordered_functions.push_back({show_fps_limit, "show_fps_limit", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_resolution])
-        ordered_functions.push_back({resolution,         value});
+        ordered_functions.push_back({resolution, "resolution", value});
     if (!params->device_battery.empty() )
-        ordered_functions.push_back({device_battery,    value});
+        ordered_functions.push_back({device_battery, "device_battery", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_media_player])
-        ordered_functions.push_back({media_player,       value});
+        ordered_functions.push_back({media_player, "media_player", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_exec_name])
-        ordered_functions.push_back({exec_name,          value});
+        ordered_functions.push_back({exec_name, "exec_name", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_duration])
-        ordered_functions.push_back({duration,          value});
+        ordered_functions.push_back({duration, "duration", value});
 }
 
 void HudElements::update_exec(){
