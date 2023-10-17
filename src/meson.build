@@ -3,12 +3,10 @@ glslang = find_program('glslang', 'glslangValidator')
 # Needs prefix for configure_file()
 if get_option('append_libdir_mangohud')
   libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'), 'mangohud')
-  # ld_libdir_mangohud = get_option('prefix') + '/\$LIB/mangohud/'
-  ld_libdir_mangohud = libdir_mangohud + '/'
+  ld_libdir_mangohud = get_option('prefix') + '/\$LIB/mangohud/'
 else
   libdir_mangohud = join_paths(get_option('prefix'), get_option('libdir'))
-  # ld_libdir_mangohud = get_option('prefix') + '/\$LIB/'
-  ld_libdir_mangohud = libdir_mangohud + '/'
+  ld_libdir_mangohud = get_option('prefix') + '/\$LIB/'
 endif
 
 git = find_program('git', required: false)
