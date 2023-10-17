@@ -7,7 +7,9 @@
 %bcond_with tests
 
 # Disable unpackaged files check for 32-bit builds shipping with conflicting files
-%define _unpackaged_files_terminate_build 0
+%if %{__isa_bits} != 64
+  %define _unpackaged_files_terminate_build 0
+%endif
 
 Name:           mangohud
 Version:        100.bazzite.{{{ git_dir_version }}}
