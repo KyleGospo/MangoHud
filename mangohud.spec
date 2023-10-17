@@ -120,7 +120,7 @@ mv imgui-%{imgui_ver} subprojects/
 %{_metainfodir}/*.metainfo.xml
 %endif
 %{_datadir}/vulkan/implicit_layer.d/*Mango*.json
-%{_libdir}/%{name}/libMangoApp.so
+%{_libdir}/%{name}/*.so
 
 %changelog
 {{{ git_dir_changelog }}}
