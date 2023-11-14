@@ -151,7 +151,7 @@ static void msg_read_thread(){
         HUDElements.gamescope_debug_app.push_back(0);
         HUDElements.gamescope_debug_latency.push_back(0);
     }
-    int key = ftok("/tmp/mangoapp", 65);
+    int key = ftok("mangoapp", 65);
     msgid = msgget(key, 0666 | IPC_CREAT);
     // uint32_t previous_pid = 0;
     const struct mangoapp_msg_header *hdr = (const struct mangoapp_msg_header*) raw_msg;
@@ -210,6 +210,7 @@ static void msg_read_thread(){
 static const char *GamescopeOverlayProperty = "GAMESCOPE_EXTERNAL_OVERLAY";
 
 static GLFWwindow* init(const char* glsl_version){
+    init_spdlog();
     GLFWwindow *window = glfwCreateWindow(1280, 800, "mangoapp overlay window", NULL, NULL);
     Display *x11_display = glfwGetX11Display();
     Window x11_window = glfwGetX11Window(window);
