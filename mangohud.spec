@@ -116,7 +116,7 @@ mv imgui-%{imgui_ver} subprojects/
 %{_bindir}/mangoapp
 %{_bindir}/mangoplot
 %{_datadir}/icons/hicolor/scalable/*/*.svg
-%{_docdir}/%{name}/%{appname}.conf.example
+%{_docdir}/%{name}/*.conf.example
 %{_mandir}/man1/%{name}.1*
 %{_mandir}/man1/mangoapp.1*
 %{_metainfodir}/*.metainfo.xml
