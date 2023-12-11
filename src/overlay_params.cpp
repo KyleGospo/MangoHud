@@ -669,6 +669,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->enabled[OVERLAY_PARAM_ENABLED_dynamic_frame_timing] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_temp_fahrenheit] = false;
    params->enabled[OVERLAY_PARAM_ENABLED_duration] = false;
+   params->enabled[OVERLAY_PARAM_ENABLED_frame_timing_detailed] = false;
    params->fps_sampling_period = 500000000; /* 500ms */
    params->width = 0;
    params->height = 140;
@@ -855,7 +856,7 @@ parse_overlay_config(struct overlay_params *params,
       params->font_scale_media_player = 0.55f;
 
    // Convert from 0xRRGGBB to ImGui's format
-   std::array<unsigned *, 21> colors = {
+   std::array<unsigned *, 22> colors = {
       &params->cpu_color,
       &params->gpu_color,
       &params->vram_color,
@@ -877,6 +878,7 @@ parse_overlay_config(struct overlay_params *params,
       &params->fps_color[0],
       &params->fps_color[1],
       &params->fps_color[2],
+      &params->text_outline_color,
    };
 
    for (auto color : colors){
@@ -1113,6 +1115,7 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "media_player", "0");
          add_to_options(params, "debug", "1");
          add_to_options(params, "version", "0");
+         add_to_options(params, "frame_timing_detailed", "1");
          break;
 
    }

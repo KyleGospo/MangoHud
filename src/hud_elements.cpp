@@ -97,6 +97,7 @@ void HudElements::convert_colors(const struct overlay_params& params)
     HUDElements.colors.fps_value_low = convert(params.fps_color[0]);
     HUDElements.colors.fps_value_med = convert(params.fps_color[1]);
     HUDElements.colors.fps_value_high = convert(params.fps_color[2]);
+    HUDElements.colors.text_outline = convert(params.text_outline_color);
 
     ImGuiStyle& style = ImGui::GetStyle();
     style.Colors[ImGuiCol_PlotLines] = convert(params.frametime_color);
@@ -161,7 +162,7 @@ static void ImGuiTableSetColumnIndex(int column)
 void HudElements::time(){
     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_time]){
         if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_horizontal] && !HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_hud_compact]){
-        ImguiNextColumnFirstItem();
+            ImguiNextColumnFirstItem();
             HUDElements.TextColored(HUDElements.colors.text, "Time");
         }
         ImguiNextColumnFirstItem();
@@ -771,6 +772,9 @@ void HudElements::frame_timing(){
             min_time = min_frametime;
             max_time = max_frametime;
         }
+        if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing_detailed]){
+            height = 125;
+        }
 
         if (ImGui::BeginChild("my_child_window", ImVec2(width, height), false, ImGuiWindowFlags_NoDecoration)) {
             if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
@@ -788,11 +792,16 @@ void HudElements::frame_timing(){
                 if (ImPlot::BeginPlot("My Plot", ImVec2(width, height), ImPlotFlags_CanvasOnly | ImPlotFlags_NoInputs)) {
                     ImPlotStyle& style = ImPlot::GetStyle();
                     style.Colors[ImPlotCol_PlotBg] = ImVec4(0.92f, 0.92f, 0.95f, 0.00f);
-                    ImPlotAxisFlags ax_flags = ImPlotAxisFlags_NoDecorations;
-                    ImPlot::SetupAxes(nullptr, nullptr, ax_flags,ax_flags);
+                    style.Colors[ImPlotCol_AxisGrid] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                    style.Colors[ImPlotCol_AxisTick] = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                    ImPlotAxisFlags ax_flags_x = ImPlotAxisFlags_NoDecorations;
+                    ImPlotAxisFlags ax_flags_y = ImPlotAxisFlags_NoDecorations;
+                    if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_frame_timing_detailed])
+                        ax_flags_y = ImPlotAxisFlags_Opposite | ImPlotAxisFlags_NoMenus;
+
+                    ImPlot::SetupAxes(nullptr, nullptr, ax_flags_x, ax_flags_y);
                     ImPlot::SetupAxisScale(ImAxis_Y1, TransformForward_Custom, TransformInverse_Custom);
                     ImPlot::SetupAxesLimits(0, 200, min_time, max_time);
-                    ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0,0));
                     ImPlot::SetNextLineStyle(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), 1.5);
                     ImPlot::PlotLine("frametime line", frametime_data.data(), frametime_data.size());
                     if (HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_throttling_status_graph] && throttling){
