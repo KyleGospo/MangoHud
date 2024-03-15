@@ -46,6 +46,7 @@ BuildRequires:  pkgconfig(nlohmann_json)
 BuildRequires:  pkgconfig(vulkan)
 BuildRequires:  pkgconfig(wayland-client)
 BuildRequires:  pkgconfig(x11)
+BuildRequires:  pkgconfig(xkbcommon)
 BuildRequires:  cmake(VulkanHeaders)
 
 %if %{with tests}
