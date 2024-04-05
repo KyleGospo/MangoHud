@@ -941,8 +941,10 @@ void HudElements::_exec(){
     ImGui::PushFont(HUDElements.sw_stats->font1);
     ImguiNextColumnFirstItem();
     for (auto& item : HUDElements.exec_list){
-        if (item.pos == HUDElements.place)
-            HUDElements.TextColored(HUDElements.colors.text, "%s", item.ret.c_str());
+        if (item.pos == HUDElements.place){
+            ImguiNextColumnFirstItem();
+            right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", item.ret.c_str());
+        }
     }
     ImGui::PopFont();
 }
@@ -1358,7 +1360,6 @@ void HudElements::graphs(){
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0.0f,5.0f));
     ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-    ImguiNextColumnOrNewRow();
     if (!HUDElements.params->enabled[OVERLAY_PARAM_ENABLED_histogram]){
         ImGui::PlotLines("", arr.data(),
                 arr.size(), 0,
@@ -1657,8 +1658,13 @@ void HudElements::legacy_elements(){
 }
 
 void HudElements::update_exec(){
+#ifdef __LINUX__
+    if (!HUDElements.shell)
+        HUDElements.shell = std::make_unique<Shell>();
+
     for(auto& item : exec_list)
-        item.ret = exec(item.value);
+        item.ret = HUDElements.shell->exec(item.value + "\n");
+#endif
 }
 
 HudElements HUDElements;
