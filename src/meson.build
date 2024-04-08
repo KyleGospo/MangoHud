@@ -145,12 +145,12 @@ if is_unixy
       'loaders/loader_x11.cpp',
       'shared_x11.cpp',
     )
+  endif
 
     opengl_files += files(
       'loaders/loader_glx.cpp',
       'gl/inject_glx.cpp',
     )
-  endif
 
   if get_option('with_wayland').enabled()
     pre_args += '-DHAVE_WAYLAND'
@@ -278,6 +278,9 @@ if is_unixy
 endif
 
 if get_option('mangoapp')
+  if not get_option('with_x11').enabled()
+    error('mangoapp also needs \'with_x11\'')
+  endif
   pre_args += '-DIMGUI_IMPL_OPENGL_LOADER_GLEW'
   pre_args += '-DMANGOAPP'
   mangoapp = executable(
