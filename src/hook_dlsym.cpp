@@ -16,6 +16,7 @@ EXPORT_C_(void*) dlsym(void * handle, const char * name)
 
     void* func = nullptr;
     void* real_func = real_dlsym(handle, name);
+    bool is_angle = !!real_dlsym(handle, "eglStreamPostD3DTextureANGLE");
 
     if (find_glx_ptr && real_func) {
         func = find_glx_ptr(name);
@@ -25,7 +26,7 @@ EXPORT_C_(void*) dlsym(void * handle, const char * name)
         }
     }
 
-    if (find_egl_ptr && real_func) {
+    if (find_egl_ptr && real_func && !is_angle) {
         func = find_egl_ptr(name);
         if (func) {
             //fprintf(stderr,"%s: local: %s\n",  __func__ , name);
