@@ -623,6 +623,7 @@ set_parameters_from_options(struct overlay_params *params)
       params->enabled[OVERLAY_PARAM_ENABLED_duration] = false;
       params->enabled[OVERLAY_PARAM_ENABLED_core_bars] = false;
       params->enabled[OVERLAY_PARAM_ENABLED_read_cfg] = read_cfg;
+      params->enabled[OVERLAY_PARAM_ENABLED_time_no_label] = false;
       params->options.erase("full");
    }
    for (auto& it : params->options) {
@@ -757,7 +758,7 @@ static void set_param_defaults(struct overlay_params *params){
    params->background_color = 0x020202;
    params->text_color = 0xffffff;
    params->media_player_color = 0xffffff;
-   params->network_color = 0xd66077;
+   params->network_color = 0xe07b85;
    params->media_player_name = "";
    params->font_scale = 1.0f;
    params->wine_color = 0xeb5b5b;
@@ -1142,6 +1143,8 @@ void presets(int preset, struct overlay_params *params, bool inherit) {
          add_to_options(params, "debug", "1");
          add_to_options(params, "version", "0");
          add_to_options(params, "frame_timing_detailed", "1");
+         add_to_options(params, "network", "1");
+         add_to_options(params, "present_mode", "0");
          break;
 
    }

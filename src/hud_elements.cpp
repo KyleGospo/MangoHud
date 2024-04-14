@@ -1085,24 +1085,23 @@ void HudElements::gamescope_frame_timing(){
         static double min_time = 0.0f;
         static double max_time = 50.0f;
         if (HUDElements.gamescope_debug_app.size() > 0 && HUDElements.gamescope_debug_app.back() > -1){
-            ImguiNextColumnFirstItem();
-            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
-            ImGui::PushFont(HUDElements.sw_stats->font1);
-            HUDElements.TextColored(HUDElements.colors.engine, "%s", "App");
-            ImGui::TableNextRow();
-            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
             auto min = std::min_element(HUDElements.gamescope_debug_app.begin(),
                                         HUDElements.gamescope_debug_app.end());
             auto max = std::max_element(HUDElements.gamescope_debug_app.begin(),
                                         HUDElements.gamescope_debug_app.end());
+            
+            ImGui::PushFont(HUDElements.sw_stats->font1);
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y));
+            HUDElements.TextColored(HUDElements.colors.engine, "%s", "App");
+            ImGui::TableSetColumnIndex(ImGui::TableGetColumnCount() - 1);
             right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width * 1.3, "min: %.1fms, max: %.1fms", min[0], max[0]);
-            ImGui::PopFont();
+            ImGui::Dummy(ImVec2(0.0f, real_font_size.y / 2));
             ImguiNextColumnFirstItem();
+            ImGui::PopFont();
             char hash[40];
             snprintf(hash, sizeof(hash), "##%s", overlay_param_names[OVERLAY_PARAM_ENABLED_frame_timing]);
             HUDElements.sw_stats->stat_selector = OVERLAY_PLOTS_frame_timing;
             HUDElements.sw_stats->time_dividor = 1000000.0f; /* ns -> ms */
-
 
             ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
             if (ImGui::BeginChild("gamescope_app_window", ImVec2(ImGui::GetWindowContentRegionWidth(), 50))) {
@@ -1412,10 +1411,12 @@ void HudElements::hdr() {
 
 void HudElements::refresh_rate() {
     if (HUDElements.refresh > 0) {
+        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "Display Hz");
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%i", HUDElements.refresh);
+        ImGui::PopFont();
     }
 }
 
@@ -1424,10 +1425,12 @@ void HudElements::winesync() {
         HUDElements.winesync_ptr = std::make_unique<WineSync>();
 
     if (HUDElements.winesync_ptr->valid()) {
+        ImGui::PushFont(HUDElements.sw_stats->font1);
         ImguiNextColumnFirstItem();
         HUDElements.TextColored(HUDElements.colors.engine, "%s", "WSYNC");
         ImguiNextColumnOrNewRow();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", HUDElements.winesync_ptr->get_method().c_str());
+        ImGui::PopFont();
     }
 }
 
@@ -1451,28 +1454,21 @@ void HudElements::network() {
     if (!HUDElements.net)
         HUDElements.net = std::make_unique<Net>();
 
-    ImguiNextColumnFirstItem();
-    HUDElements.TextColored(HUDElements.colors.network, "%s", "NET");
-    ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "TX");
-    ImGui::TableNextColumn();
-    right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%s", "RX");
-
     for (auto& iface : HUDElements.net->interfaces){
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
-        HUDElements.TextColored(HUDElements.colors.network, "%s", iface.name.c_str());
+        HUDElements.TextColored(HUDElements.colors.network, "%.8s", iface.name.c_str());
         ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", iface.txBps / 1000.f);
         ImGui::SameLine(0,1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
-        HUDElements.TextColored(HUDElements.colors.text, "KB/s");
+        HUDElements.TextColored(HUDElements.colors.text, "KB/s %s", ICON_FK_ARROW_UP);
         ImGui::PopFont();
         ImGui::TableNextColumn();
         right_aligned_text(HUDElements.colors.text, HUDElements.ralign_width, "%.0f", iface.rxBps / 1000.f);
         ImGui::SameLine(0,1.0f);
         ImGui::PushFont(HUDElements.sw_stats->font1);
-        HUDElements.TextColored(HUDElements.colors.text, "KB/s");
+        HUDElements.TextColored(HUDElements.colors.text, "KB/s %s", ICON_FK_ARROW_DOWN);
         ImGui::PopFont();
     }
 #endif
@@ -1588,6 +1584,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({vram, "vram", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_ram])
         ordered_functions.push_back({ram, "ram", value});
+    if (!params->network.empty())
+        ordered_functions.push_back({network, "network", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_battery])
         ordered_functions.push_back({battery, "battery", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fan])
@@ -1596,8 +1594,6 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({gamescope_fsr, "gamescope_fsr", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_hdr])
         ordered_functions.push_back({hdr, "hdr", value});
-    if (params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
-        ordered_functions.push_back({refresh_rate, "refresh_rate", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_throttling_status])
         ordered_functions.push_back({throttling_status, "throttling_status", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_fps])
@@ -1651,9 +1647,8 @@ void HudElements::legacy_elements(){
         ordered_functions.push_back({winesync, "winesync", value});
     if (params->enabled[OVERLAY_PARAM_ENABLED_present_mode])
         ordered_functions.push_back({present_mode, "present_mode", value});
-    if (!params->network.empty())
-        ordered_functions.push_back({network, "network", value});
-
+    if (params->enabled[OVERLAY_PARAM_ENABLED_refresh_rate])
+        ordered_functions.push_back({refresh_rate, "refresh_rate", value});
 }
 
 void HudElements::update_exec(){
