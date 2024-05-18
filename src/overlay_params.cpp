@@ -665,11 +665,11 @@ parse_overlay_env(struct overlay_params *params,
             add_to_options(params, key, value);
             initialize_preset(params);
          }
-         presets(current_preset, params);
          break;
       }
    }
 
+   presets(current_preset, params);
    env = env_start;
 
    while ((num = parse_string(env, key, value)) != 0) {
@@ -794,6 +794,9 @@ parse_overlay_config(struct overlay_params *params,
      .preset = use_existing_preset ? params->preset : default_preset
    };
    set_param_defaults(params);
+   if (!use_existing_preset) {
+      current_preset = params->preset[0];
+   }
 
 #ifdef HAVE_X11
    params->toggle_hud = { XK_Shift_R, XK_F12 };
