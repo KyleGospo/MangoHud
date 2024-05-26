@@ -8,7 +8,6 @@ extern "C" {
 #include "stdio.h"
 #include "../src/amdgpu.h"
 #include "../src/cpu.h"
-#include <endian.h>
 
 #define UNUSED(x) (void)(x)
 
