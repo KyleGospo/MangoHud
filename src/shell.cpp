@@ -76,7 +76,9 @@ std::string Shell::exec(std::string cmd) {
 }
 
 void Shell::writeCommand(std::string command) {
-    if (write(to_shell[1], command.c_str(), command.length()) == -1)
+    std::string command_without_preload = "LD_PRELOAD= " + command;
+    
+    if (write(to_shell[1], command_without_preload.c_str(), command_without_preload.length()) == -1)
         SPDLOG_ERROR("Failed to write to shell");
     
     trim(command);
