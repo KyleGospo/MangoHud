@@ -53,6 +53,15 @@ class HudElements{
         int hdr_status = 0;
         int refresh = 0;
         unsigned int vsync = 10;
+        
+        enum display_servers {
+            UNKNOWN,
+            WAYLAND,
+            XWAYLAND,
+            XORG
+        };
+
+        display_servers display_server = UNKNOWN;
         std::unique_ptr<WineSync> winesync_ptr = nullptr;
         std::unique_ptr<Net> net = nullptr;
 #ifdef __linux__
@@ -104,6 +113,7 @@ class HudElements{
         static void winesync();
         static void present_mode();
         static void network();
+        static void _display_session();
 
         void convert_colors(const struct overlay_params& params);
         void convert_colors(bool do_conv, const struct overlay_params& params);
