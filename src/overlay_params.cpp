@@ -39,6 +39,7 @@
 
 #include "app/mangoapp.h"
 #include "fps_metrics.h"
+#include "version.h"
 
 std::unique_ptr<fpsMetrics> fpsmetrics;
 std::mutex config_mtx;
@@ -423,7 +424,6 @@ parse_fps_metrics(const char *str){
 #define parse_media_player_name(s) parse_str(s)
 #define parse_font_scale_media_player(s) parse_float(s)
 #define parse_cpu_text(s) parse_str(s)
-#define parse_gpu_text(s) parse_str(s)
 #define parse_fps_text(s) parse_str(s)
 #define parse_log_interval(s) parse_unsigned(s)
 #define parse_font_size(s) parse_float(s)
@@ -472,6 +472,7 @@ parse_fps_metrics(const char *str){
 #define parse_text_outline_thickness(s) parse_float(s)
 #define parse_device_battery(s) parse_str_tokenize(s)
 #define parse_network(s) parse_str_tokenize(s)
+#define parse_gpu_text(s) parse_str_tokenize(s)
 
 static bool
 parse_help(const char *str)
@@ -758,6 +759,7 @@ void
 parse_overlay_config(struct overlay_params *params,
                   const char *env, bool use_existing_preset)
 {
+   SPDLOG_DEBUG("Version: {}", MANGOHUD_VERSION);
    std::vector<int> default_preset = {-1, 0, 1, 2, 3, 4};
    *params = {
      .preset = use_existing_preset ? params->preset : default_preset

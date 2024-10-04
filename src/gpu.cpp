@@ -16,7 +16,7 @@ using namespace std::chrono_literals;
 #include <iostream>
 #include <filesystem>
 #include <string>
-namespace fs = std::filesystem;
+namespace fs = ghc::filesystem;
 
 GPUS::GPUS() {
     std::vector<std::string> gpu_entries;
@@ -44,7 +44,9 @@ GPUS::GPUS() {
     for (const auto& node_name : gpu_entries) {
         uint32_t vendor_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/vendor"), nullptr, 16);
         uint32_t device_id = std::stoul(read_line("/sys/class/drm/" + node_name + "/device/device"), nullptr, 16);
-        const char* pci_dev = get_pci_device_address("/sys/class/drm/" + node_name).c_str();
+        std::string path = "/sys/class/drm/" + node_name;
+        std::string device_address = get_pci_device_address(path);  // Store the result
+        const char* pci_dev = device_address.c_str();
 
         std::shared_ptr<GPU> ptr = std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev);
         available_gpus.emplace_back(ptr);
@@ -64,7 +66,7 @@ std::string GPUS::get_pci_device_address(const std::string& drm_card_path) {
 
     // Extract the last PCI address from the path using a regular expression
     // This regex matches typical PCI addresses like 0000:03:00.0
-    std::regex pci_address_regex(R"((\d{4}:\d{2}:\d{2}\.\d))");
+    std::regex pci_address_regex(R"((\d{4}:[a-z0-9]{2}:\d{2}\.\d))");
     std::smatch match;
     std::string pci_address;
 
@@ -90,7 +92,7 @@ void GPUS::find_active_gpu() {
 
     for (const auto& entry : fs::directory_iterator(fdinfo_dir)) {
         if (entry.is_regular_file()) {
-            std::ifstream file(entry.path());
+            std::ifstream file(entry.path().string());
             std::string line;
             std::string drm_pdev;
             bool has_drm_driver = false;
@@ -117,9 +119,11 @@ void GPUS::find_active_gpu() {
                     if (gpu->pci_dev == drm_pdev) {
                         gpu->is_active = true;
                         SPDLOG_DEBUG("Active GPU Found: node_name: {}, pci_dev: {}", gpu->name, gpu->pci_dev);
-                        return;
+                    } else {
+                        gpu->is_active = false;
                     }
                 }
+                return;
             }
         }
     }
