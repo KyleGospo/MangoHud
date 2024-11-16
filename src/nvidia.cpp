@@ -27,19 +27,19 @@ void NVIDIA::parse_token(std::string token, std::unordered_map<std::string, std:
 NVIDIA::NVIDIA(const char* pciBusId) {
 #ifdef HAVE_NVML
     auto& nvml = get_libnvml_loader();
-    if (nvml.IsLoaded()){
+    if (nvml.IsLoaded()) {
         nvmlReturn_t result = nvml.nvmlInit();
         if (NVML_SUCCESS != result) {
-            SPDLOG_ERROR("Nvidia module not loaded");
+            SPDLOG_ERROR("Nvidia module initialization failed: {}", nvml.nvmlErrorString(result));
             nvml_available = false;
         } else {
-            result = NVML_ERROR_UNKNOWN;
-                if (pciBusId && ((result = nvml.nvmlDeviceGetHandleByPciBusId(pciBusId, &device)) != NVML_SUCCESS)) {
+            nvml_available = true; // NVML initialized successfully
+            if (pciBusId) {
+                result = nvml.nvmlDeviceGetHandleByPciBusId(pciBusId, &device);
+                if (NVML_SUCCESS != result) {
                     SPDLOG_ERROR("Getting device handle by PCI bus ID failed: {}", nvml.nvmlErrorString(result));
-                    if (result != NVML_SUCCESS)
-                        SPDLOG_ERROR("Getting device handle failed: {}", nvml.nvmlErrorString(result));
-
-                    nvml_available = false;
+                    nvml_available = false; // Revert if getting device handle fails
+                }
             }
         }
     }
@@ -64,7 +64,6 @@ NVIDIA::NVIDIA(const char* pciBusId) {
 
 #endif
 #ifdef HAVE_NVML
-    nvml_available = true;
     if (nvml_available || nvctrl_available){
         throttling = std::make_shared<Throttling>(0x10de);
         std::thread thread(&NVIDIA::get_samples_and_copy, this);
@@ -218,9 +217,11 @@ void NVIDIA::get_samples_and_copy() {
     while(!stop_thread) {
         for (size_t cur_sample_id=0; cur_sample_id < METRICS_SAMPLE_COUNT; cur_sample_id++) {
 #ifdef HAVE_NVML
+        if (nvml_available)
             NVIDIA::get_instant_metrics_nvml(&metrics_buffer[cur_sample_id]);
 #endif
 #if defined(HAVE_XNVCTRL) && defined(HAVE_X11)
+        if (nvctrl_available)
             NVIDIA::get_instant_metrics_xnvctrl(&metrics_buffer[cur_sample_id]);
 #endif
             usleep(METRICS_POLLING_PERIOD_MS * 1000);
