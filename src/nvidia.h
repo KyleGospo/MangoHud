@@ -11,6 +11,7 @@
 class NVIDIA {
     public:
         std::shared_ptr<Throttling> throttling;
+        bool nvml_available;
         
         gpu_metrics copy_metrics() {
             std::lock_guard<std::mutex> lock(metrics_mutex);
@@ -29,14 +30,16 @@ class NVIDIA {
 #ifdef HAVE_NVML
         std::vector<int> pids() {
             std::vector<int> vec;
-            auto& nvml = get_libnvml_loader();
-            unsigned int infoCount = 0;
-            nvmlProcessInfo_t *process_info = new nvmlProcessInfo_t[infoCount];
-            nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, process_info);
-            process_info = new nvmlProcessInfo_t[infoCount];
-            nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, process_info);
-            for (size_t i = 0; i < infoCount; i++)
-                vec.push_back(static_cast<int> (process_info[i].pid));
+            if(nvml_available) {
+                auto& nvml = get_libnvml_loader();
+                unsigned int infoCount = 0;
+                nvmlProcessInfo_t *process_info = new nvmlProcessInfo_t[infoCount];
+                nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, process_info);
+                process_info = new nvmlProcessInfo_t[infoCount];
+                nvml.nvmlDeviceGetGraphicsRunningProcesses(device, &infoCount, process_info);
+                for (size_t i = 0; i < infoCount; i++)
+                    vec.push_back(static_cast<int> (process_info[i].pid));
+            }
 
             return vec;
         };
@@ -63,7 +66,6 @@ class NVIDIA {
         nvmlDevice_t device;
         void get_instant_metrics_nvml(struct gpu_metrics *metrics);
 #endif
-        bool nvml_available;
         bool nvctrl_available;
         bool failed;
         
