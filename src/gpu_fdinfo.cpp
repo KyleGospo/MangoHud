@@ -1,114 +1,92 @@
 #include "gpu_fdinfo.h"
 namespace fs = ghc::filesystem;
 
-std::string GPU_fdinfo::get_drm_engine_type() {
-    std::string drm_type = "drm-engine-";
+void GPU_fdinfo::find_fd()
+{
+    auto path = fs::path("/proc/self/fdinfo");
 
-    if (strstr(module, "amdgpu"))
-        drm_type += "gfx";
-    else if (strstr(module, "i915"))
-        drm_type += "render";
-    else if (strstr(module, "msm"))
-        drm_type += "gpu";
-    else
-        drm_type += "none";
-
-    return drm_type;
-}
-
-std::string GPU_fdinfo::get_drm_memory_type() {
-    std::string drm_type = "drm-";
-
-    // msm driver does not report vram usage
-
-    if (strstr(module, "amdgpu"))
-        drm_type += "memory-vram";
-    else if (strstr(module, "i915"))
-        drm_type += "total-local0";
-    else
-        drm_type += "memory-none";
-
-    return drm_type;
-}
-
-void GPU_fdinfo::find_fd() {
-#ifdef __linux__
-    DIR* dir = opendir("/proc/self/fdinfo");
-    if (!dir) {
-        perror("Failed to open directory");
+    if (!fs::exists(path)) {
+        SPDLOG_DEBUG("{} does not exist", path.string());
+        return;
     }
 
-    for (const auto& entry : fs::directory_iterator("/proc/self/fdinfo")){
-        FILE* file = fopen(entry.path().string().c_str(), "r");
+    std::vector<std::string> fds_to_open;
+    for (const auto& entry : fs::directory_iterator(path)) {
+        auto fd_path = entry.path().string();
+        auto file = std::ifstream(fd_path);
 
-        if (!file) continue;
+        if (!file.is_open())
+            continue;
 
-        char line[256];
         bool found_driver = false;
-        while (fgets(line, sizeof(line), file)) {
-            if (strstr(line, module) != NULL)
+        for (std::string line; std::getline(file, line);) {
+            if (line.find(module) != std::string::npos)
                 found_driver = true;
 
-            if (found_driver) {
-                if(strstr(line, get_drm_engine_type().c_str())) {
-                    fdinfo.push_back(file);
-                    break;
-                }
-            }
-        }
-
-        if (!found_driver)
-            fclose(file);
-    }
-
-    closedir(dir);
-#endif
-}
-
-uint64_t GPU_fdinfo::get_gpu_time() {
-    char line[256];
-    uint64_t total_val = 0;
-    for (auto fd : fdinfo) {
-        rewind(fd);
-        fflush(fd);
-        uint64_t val = 0;
-        while (fgets(line, sizeof(line), fd)){
-            std::string scan_str = get_drm_engine_type() + ": %" SCNu64 " ns";
-
-            if (sscanf(line, scan_str.c_str(), &val) == 1) {
-                total_val += val;
+            if (found_driver && line.find(drm_engine_type) != std::string::npos) {
+                fds_to_open.push_back(fd_path);
                 break;
             }
         }
     }
 
-    return total_val;
+    for (const auto& fd : fds_to_open) {
+        fdinfo.push_back(std::ifstream(fd));
+        fdinfo_data.push_back({});
+
+        if (module == "xe")
+            xe_fdinfo_last_cycles.push_back(0);
+    }
 }
 
-float GPU_fdinfo::get_vram_usage() {
-    char line[256];
-    uint64_t total_val = 0;
+void GPU_fdinfo::gather_fdinfo_data() {
+    for (size_t i = 0; i < fdinfo.size(); i++) {
+        fdinfo[i].clear();
+        fdinfo[i].seekg(0);
 
-    for (auto fd : fdinfo) {
-        rewind(fd);
-        fflush(fd);
-
-        uint64_t val = 0;
-
-        while (fgets(line, sizeof(line), fd)) {
-            std::string scan_str = get_drm_memory_type() + ": %llu KiB";
-
-            if (sscanf(line, scan_str.c_str(), &val) == 1) {
-                total_val += val;
-                break;
-            }
+        for (std::string line; std::getline(fdinfo[i], line);) {
+            auto key = line.substr(0, line.find(":"));
+            auto val = line.substr(key.length() + 2);
+            fdinfo_data[i][key] = val;
         }
     }
-
-    return (float)total_val / 1024 / 1024;
 }
 
-void GPU_fdinfo::find_intel_hwmon() {
+uint64_t GPU_fdinfo::get_gpu_time()
+{
+    uint64_t total = 0;
+
+    for (auto& fd : fdinfo_data) {
+        auto time = fd[drm_engine_type];
+
+        if (time.empty())
+            continue;
+
+        total += std::stoull(time);
+    }
+
+    return total;
+}
+
+float GPU_fdinfo::get_memory_used()
+{
+    uint64_t total = 0;
+
+    for (auto& fd : fdinfo_data) {
+        auto mem = fd[drm_memory_type];
+
+        if (mem.empty())
+            continue;
+
+        total += std::stoull(mem);
+    }
+
+    // TODO: sometimes it's not KB, so add a check for that.
+    return (float)total / 1024 / 1024;
+}
+
+void GPU_fdinfo::find_intel_hwmon()
+{
     std::string device = "/sys/bus/pci/devices/";
     device += pci_dev;
     device += "/hwmon";
@@ -126,7 +104,7 @@ void GPU_fdinfo::find_intel_hwmon() {
         return;
     }
 
-    hwmon += "/energy1_input";
+    hwmon += module == "i915" ? "/energy1_input" : "/energy2_input";
 
     if (!fs::exists(hwmon)) {
         SPDLOG_DEBUG("Intel hwmon: file {} doesn't exist.", hwmon);
@@ -141,7 +119,8 @@ void GPU_fdinfo::find_intel_hwmon() {
         SPDLOG_DEBUG("Intel hwmon: failed to open {}", hwmon);
 }
 
-float GPU_fdinfo::get_power_usage() {
+float GPU_fdinfo::get_current_power()
+{
     if (!energy_stream.is_open())
         return 0.f;
 
@@ -160,40 +139,121 @@ float GPU_fdinfo::get_power_usage() {
     return (float)energy_input / 1'000'000;
 }
 
-void GPU_fdinfo::get_load() {
+float GPU_fdinfo::get_power_usage()
+{
+    static float last;
+    float now = get_current_power();
+
+    float delta = now - last;
+    delta /= (float)METRICS_UPDATE_PERIOD_MS / 1000;
+
+    last = now;
+
+    return delta;
+}
+
+std::pair<uint64_t, uint64_t> GPU_fdinfo::get_gpu_time_xe()
+{
+    uint64_t total_cycles = 0, total_total_cycles = 0;
+
+    size_t idx = -1;
+    for (auto& fd : fdinfo_data) {
+        idx++;
+
+        auto cur_cycles_str = fd["drm-cycles-rcs"];
+        auto cur_total_cycles_str = fd["drm-total-cycles-rcs"];
+
+        if (cur_cycles_str.empty() || cur_total_cycles_str.empty())
+            continue;
+
+        auto cur_cycles = std::stoull(cur_cycles_str);
+        auto cur_total_cycles = std::stoull(cur_total_cycles_str);
+
+        if (
+            cur_cycles <= 0 ||
+            cur_cycles == xe_fdinfo_last_cycles[idx] ||
+            cur_total_cycles <= 0
+        )
+            continue;
+
+        total_cycles += cur_cycles;
+        total_total_cycles += cur_total_cycles;
+
+        xe_fdinfo_last_cycles[idx] = cur_cycles;
+    }
+
+    return { total_cycles, total_total_cycles };
+}
+
+int GPU_fdinfo::get_xe_load()
+{
+    static uint64_t previous_cycles, previous_total_cycles;
+
+    auto gpu_time = get_gpu_time_xe();
+    uint64_t cycles = gpu_time.first;
+    uint64_t total_cycles = gpu_time.second;
+
+    uint64_t delta_cycles = cycles - previous_cycles;
+    uint64_t delta_total_cycles = total_cycles - previous_total_cycles;
+
+    if (delta_cycles == 0 || delta_total_cycles == 0)
+        return 0;
+
+    double load = (double)delta_cycles / delta_total_cycles * 100;
+
+    if (load > 100.f)
+        load = 100.f;
+
+    previous_cycles = cycles;
+    previous_total_cycles = total_cycles;
+
+    // SPDLOG_DEBUG("cycles             = {}", cycles);
+    // SPDLOG_DEBUG("total_cycles       = {}", total_cycles);
+    // SPDLOG_DEBUG("delta_cycles       = {}", delta_cycles);
+    // SPDLOG_DEBUG("delta_total_cycles = {}", delta_total_cycles);
+    // SPDLOG_DEBUG("{} / {} * 100 = {}", delta_cycles, delta_total_cycles, load);
+    // SPDLOG_DEBUG("load = {}\n", std::lround(load));
+
+    return std::lround(load);
+}
+
+int GPU_fdinfo::get_gpu_load()
+{
+    static uint64_t previous_gpu_time, previous_time;
+
+    if (module == "xe")
+        return get_xe_load();
+
+    uint64_t now = os_time_get_nano();
+    uint64_t gpu_time_now = get_gpu_time();
+
+    float delta_time = now - previous_time;
+    float delta_gpu_time = gpu_time_now - previous_gpu_time;
+
+    int result = delta_gpu_time / delta_time * 100;
+
+    if (result > 100)
+        result = 100;
+
+    previous_gpu_time = gpu_time_now;
+    previous_time = now;
+
+    return result;
+}
+
+void GPU_fdinfo::main_thread()
+{
     while (!stop_thread) {
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
 
-        static uint64_t previous_gpu_time, previous_time, now, gpu_time_now;
-        static float power_usage_now, previous_power_usage;
+        gather_fdinfo_data();
 
-        now = os_time_get_nano();
-        gpu_time_now = get_gpu_time();
-        power_usage_now = get_power_usage();
-
-        if (gpu_time_now > previous_gpu_time) {
-            float time_since_last = now - previous_time;
-            float gpu_since_last = gpu_time_now - previous_gpu_time;
-            float power_usage_since_last =
-                (power_usage_now - previous_power_usage) /
-                ((float)METRICS_UPDATE_PERIOD_MS / 1000);
-
-            auto result = int((gpu_since_last / time_since_last) * 100);
-            if (result > 100)
-                result = 100;
-
-            metrics.load = result;
-            metrics.memoryUsed = get_vram_usage();
-            metrics.powerUsage = power_usage_since_last;
-
-            previous_gpu_time = gpu_time_now;
-            previous_time = now;
-            previous_power_usage = power_usage_now;
-        }
+        metrics.load = get_gpu_load();
+        metrics.memoryUsed = get_memory_used();
+        metrics.powerUsage = get_power_usage();
 
         std::this_thread::sleep_for(
-            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS)
-        );
+            std::chrono::milliseconds(METRICS_UPDATE_PERIOD_MS));
     }
 }
