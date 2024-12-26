@@ -143,12 +143,12 @@ if is_unixy
       'loaders/loader_x11.cpp',
       'shared_x11.cpp',
     )
-  endif
 
     opengl_files += files(
       'loaders/loader_glx.cpp',
       'gl/inject_glx.cpp',
     )
+  endif
 
   if get_option('with_wayland').enabled()
     pre_args += '-DHAVE_WAYLAND'
@@ -322,6 +322,19 @@ mangoapp = executable(
   install_tag : 'mangoapp', #TODO MangoHud layer itself currently doesn't support it
   install : true
 )
+endif
+if is_unixy
+  mangohud_shim = shared_library(
+    'MangoHud_shim',
+    files(
+      'gl/shim.c',
+    ),
+    dependencies : [
+      dep_dl
+    ],
+    install_dir : libdir_mangohud,
+    install: true
+  )
 endif
 
 configure_file(input : 'mangohud.json.in',
