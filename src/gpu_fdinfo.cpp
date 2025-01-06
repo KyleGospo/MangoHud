@@ -1,9 +1,20 @@
 #include "gpu_fdinfo.h"
+
+#ifndef TEST_ONLY
+#include "hud_elements.h"
+#endif
+
 namespace fs = ghc::filesystem;
 
 void GPU_fdinfo::find_fd()
 {
-    auto path = fs::path("/proc/self/fdinfo");
+    fdinfo.clear();
+    fdinfo_data.clear();
+
+    auto dir = std::string("/proc/") + std::to_string(pid) + "/fdinfo";
+    auto path = fs::path(dir);
+
+    SPDLOG_DEBUG("fdinfo_dir = {}", dir);
 
     if (!fs::exists(path)) {
         SPDLOG_DEBUG("{} does not exist", path.string());
@@ -481,6 +492,23 @@ void GPU_fdinfo::main_thread()
     while (!stop_thread) {
         std::unique_lock<std::mutex> lock(metrics_mutex);
         cond_var.wait(lock, [this]() { return !paused || stop_thread; });
+
+#ifndef TEST_ONLY
+        if (HUDElements.g_gamescopePid > 0 && HUDElements.g_gamescopePid != pid)
+        {
+            pid = HUDElements.g_gamescopePid;
+            find_fd();
+        }
+#endif
+
+        // Recheck fds every 10secs, fixes Mass Effect 1, maybe some others too
+        {
+            auto t = os_time_get_nano() / 1'000'000;
+            if (t - fdinfo_last_update_ms >= 10'000) {
+                find_fd();
+                fdinfo_last_update_ms = t;
+            }
+        }
 
         gather_fdinfo_data();
         get_current_hwmon_readings();

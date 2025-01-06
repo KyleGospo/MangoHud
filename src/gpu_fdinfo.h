@@ -1,11 +1,16 @@
 #pragma once
-#include <cstdint>
-#include <filesystem.h>
+
 #include <inttypes.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
+#include <cstdint>
 #include <thread>
+#include <atomic>
+#include <map>
+#include <set>
+#include <regex>
 
 #ifdef TEST_ONLY
 #include <../src/mesa/util/os_time.h>
@@ -13,12 +18,10 @@
 #include "mesa/util/os_time.h"
 #endif
 
-#include "gpu_metrics_util.h"
-#include <atomic>
 #include <spdlog/spdlog.h>
-#include <map>
-#include <set>
-#include <regex>
+#include <filesystem.h>
+
+#include "gpu_metrics_util.h"
 
 struct hwmon_sensor {
     std::regex rx;
@@ -53,6 +56,7 @@ private:
     mutable std::mutex metrics_mutex;
 
     std::vector<std::ifstream> fdinfo;
+    uint64_t fdinfo_last_update_ms = 0;
 
     std::map<std::string, hwmon_sensor> hwmon_sensors;
 
@@ -116,27 +120,32 @@ public:
 
         if (module == "i915") {
             drm_engine_type = "drm-engine-render";
-            drm_memory_type = "drm-total-local0";
+            drm_memory_type = "drm-resident-local0";
         } else if (module == "xe") {
             drm_engine_type = "drm-total-cycles-rcs";
             drm_memory_type = "drm-resident-vram0";
-
-            if (
-                fdinfo_data.size() > 0 &&
-                fdinfo_data[0].find(drm_memory_type) == fdinfo_data[0].end()
-            ) {
-                SPDLOG_DEBUG(
-                    "\"{}\" is not found, you probably have an integrated GPU. "
-                    "Using \"drm-resident-gtt\".", drm_memory_type
-                );
-                drm_memory_type = "drm-resident-gtt";
-            }
         } else if (module == "amdgpu") {
             drm_engine_type = "drm-engine-gfx";
             drm_memory_type = "drm-memory-vram";
         } else if (module == "msm") {
             // msm driver does not report vram usage
             drm_engine_type = "drm-engine-gpu";
+        }
+
+        if (fdinfo_data.size() > 0 &&
+            fdinfo_data[0].find(drm_memory_type) == fdinfo_data[0].end())
+        {
+            auto old_type = drm_memory_type;
+
+            if (module == "i915")
+                drm_memory_type = "drm-resident-system0";
+            else if (module == "xe")
+                drm_memory_type = "drm-resident-gtt";
+
+            SPDLOG_DEBUG(
+                "\"{}\" is not found, you probably have an integrated GPU. "
+                "Using \"{}\"", old_type, drm_memory_type
+            );
         }
 
         SPDLOG_DEBUG(
