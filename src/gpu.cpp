@@ -55,16 +55,28 @@ GPUS::GPUS(overlay_params* params) : params(params) {
 
         uint32_t vendor_id = 0;
         uint32_t device_id = 0;
-        try {
-            vendor_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/vendor"), nullptr, 16);
-        } catch(...) {
-            SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/vendor");
+
+        if (!device_address.empty())
+        {
+            try {
+                vendor_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/vendor"), nullptr, 16);
+            } catch(...) {
+                SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/vendor");
+            }
+
+            try {
+                device_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/device"), nullptr, 16);
+            } catch (...) {
+                SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/device");
+            }
         }
 
-        try {
-            device_id = std::stoul(read_line("/sys/bus/pci/devices/" + device_address + "/device"), nullptr, 16);
-        } catch (...) {
-            SPDLOG_ERROR("stoul failed on: {}", "/sys/bus/pci/devices/" + device_address + "/device");
+        if (!vendor_id) {
+            auto line = read_line("/sys/class/drm/" + node_name + "/device/uevent" );
+            if (line.find("DRIVER=msm_dpu") != std::string::npos) {
+                SPDLOG_DEBUG("MSM device found!");
+                vendor_id = 0x5143;
+            }
         }
 
         std::shared_ptr<GPU> ptr = std::make_shared<GPU>(node_name, vendor_id, device_id, pci_dev);
@@ -96,7 +108,7 @@ GPUS::GPUS(overlay_params* params) : params(params) {
             "You have more than 1 active GPU, check if you use both pci_dev "
             "and gpu_list. If you use fps logging, MangoHud will log only "
             "this GPU: name = {}, vendor = {:x}, pci_dev = {}",
-            gpu->name, gpu->vendor_id, gpu->pci_dev
+            gpu->drm_node, gpu->vendor_id, gpu->pci_dev
         );
 
         break;

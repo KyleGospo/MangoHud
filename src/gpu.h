@@ -22,7 +22,7 @@ class GPU {
 
     public:
         gpu_metrics metrics;
-        std::string name;
+        std::string drm_node;
         std::unique_ptr<NVIDIA> nvidia = nullptr;
         std::unique_ptr<AMDGPU> amdgpu = nullptr;
         std::unique_ptr<GPU_fdinfo> fdinfo = nullptr;
@@ -30,8 +30,8 @@ class GPU {
         std::string pci_dev;
         uint32_t vendor_id = 0;
 
-        GPU(std::string name, uint32_t vendor_id, uint32_t device_id, const char* pci_dev)
-            : name(name), pci_dev(pci_dev), vendor_id(vendor_id), device_id(device_id) {
+        GPU(std::string drm_node, uint32_t vendor_id, uint32_t device_id, const char* pci_dev)
+            : drm_node(drm_node), pci_dev(pci_dev), vendor_id(vendor_id), device_id(device_id) {
                 if (vendor_id == 0x10de)
                     nvidia = std::make_unique<NVIDIA>(pci_dev);
 
@@ -41,10 +41,10 @@ class GPU {
                 // For now we're only accepting one of these modules at once
                 // Might be possible that multiple can exist on a system in the future?
                 if (vendor_id == 0x8086)
-                    fdinfo = std::make_unique<GPU_fdinfo>(is_i915_or_xe(), pci_dev);
+                    fdinfo = std::make_unique<GPU_fdinfo>(is_i915_or_xe(), pci_dev, drm_node);
 
                 if (vendor_id == 0x5143)
-                    fdinfo = std::make_unique<GPU_fdinfo>("msm", pci_dev);
+                    fdinfo = std::make_unique<GPU_fdinfo>("msm", pci_dev, drm_node);
         }
 
         gpu_metrics get_metrics() {

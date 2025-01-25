@@ -45,6 +45,7 @@ private:
 
     const std::string module;
     const std::string pci_dev;
+    const std::string drm_node;
 
     std::thread thread;
     std::condition_variable cond_var;
@@ -81,7 +82,9 @@ private:
 
     float get_memory_used();
 
-    void find_hwmon();
+    void find_hwmon_sensors();
+    std::string find_hwmon_dir();
+    std::string find_msm_hwmon_dir();
     void get_current_hwmon_readings();
 
     float get_power_usage();
@@ -109,9 +112,10 @@ private:
         std::vector<std::ifstream> &throttle_reason_streams);
 
 public:
-    GPU_fdinfo(const std::string module, const std::string pci_dev)
+    GPU_fdinfo(const std::string module, const std::string pci_dev, const std::string drm_node)
         : module(module)
         , pci_dev(pci_dev)
+        , drm_node(drm_node)
     {
         SPDLOG_DEBUG("GPU driver is \"{}\"", module);
 
@@ -159,7 +163,7 @@ public:
         hwmon_sensors["power"]     = { .rx = std::regex("power(\\d+)_input") };
         hwmon_sensors["energy"]    = { .rx = std::regex("energy(\\d+)_input") };
 
-        find_hwmon();
+        find_hwmon_sensors();
 
         if (module == "i915")
             find_i915_gt_dir();
