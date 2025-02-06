@@ -1566,7 +1566,7 @@ void HudElements::sort_elements(const std::pair<std::string, std::string>& optio
         {"winesync", {winesync}},
         {"present_mode", {present_mode}},
         {"network", {network}},
-        {"display_session", {_display_session}}
+        {"display_server", {_display_session}}
 
     };
 
